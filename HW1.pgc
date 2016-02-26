@@ -1,4 +1,4 @@
-#include <iostream>
+#include <stdio.h>
 #include <vector>
 #include <string>
 using namespace std;
@@ -30,7 +30,11 @@ public:
 	char name[20];
 	vector<Product> product;
 
-	Customer(char *c) : name(c){}
+	Customer(char c[]){
+		for(int i=0; i<20; i++){
+			name[i]=c[i];
+		}
+	}
 	~Customer(){
 		delete [] name;
 	}
@@ -43,7 +47,11 @@ public:
 	char name[20];
 	vector<DetailInfo> detailInfo;
 
-	Product(char *c) : name(c){}
+	Product(char c[]){
+		for(int i=0; i<20; i++){
+			name[i]=c[i];
+		}
+	}
 	~Product(){
 		delete [] name;
 	}
@@ -59,20 +67,43 @@ public:
 	char	 state[3];
 	long	 quant;
 
-	DetailInfo(const short &d, const short &m, const short &y, char *s, const long &q) : dd(d), mm(m), yy(y), state(s), quant(q){} 
+	DetailInfo(const short &d, const short &m, const short &y, char s[], const long &q) : dd(d), mm(m), yy(y), quant(q){
+		for(int i=0; i<3; i++){
+			state[i]=s[i];
+		}
+	} 
 };
 
 //----------------------------------------------------------------------
 void trieBuild(vector<Customer> &custList){
 //----------------------------------------------------------------------
-	bool in_the_list = false;
-	for(int i=0; i<custList.size(); i++)     //check if current customer is in the list
-		if(strcmp(custList.name, sale_rec.cust)==0)
-			{
-				in_the_list = true;
+	bool cust_in_the_list = false;
+	bool prod_in_the_list = false;
+	int custIndex, prodIndex;
+	for(custIndex=0; custIndex<custList.size(); custIndex++)     //check if current customer is in the list
+		if(strcmp(custList[custIndex].name, sale_rec.cust)==0){
+				cust_in_the_list = true;
 				break;
 			}
-	if()
+	if(cust_in_the_list){
+		for(prodIndex=0; prodIndex<custList[custIndex].product.size();i++)
+			if(strcmp(custList[custIndex].product[prodIndex].name,sale_rec.prod)==0){
+				prod_in_the_list=true;
+				break;
+			}
+		if(prod_in_the_list){
+			custList[custIndex].product[prodIndex].detailInfo.push_back(DetailInfo(sale_rec.dd,sale_rec.mm,sale_rec.yy,sale_rec.state,sale_rec.quant));
+		}
+		else{
+			custList[custIndex].product.push_back(Product(sale_rec.prod));
+			custList[custIndex].product[prodIndex].detailInfo.push_back(DetailInfo(sale_rec.dd,sale_rec.mm,sale_rec.yy,sale_rec.state,sale_rec.quant));
+		}
+	}
+	else{
+		custList.push_back(Customer(sale_rec.cust));
+		custList[custIndex].product.push_back(Product(sale_rec.prod));
+		custList[custIndex].product[0].detailInfo.push_back(DetailInfo(sale_rec.dd,sale_rec.mm,sale_rec.yy,sale_rec.state,sale_rec.quant));
+	}
 }
 //----------------------------------------------------------------------
 // Main function
