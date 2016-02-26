@@ -1,0 +1,109 @@
+#include <iostream>
+#include <vector>
+#include <string>
+using namespace std;
+//----------------------------------------------------------------------
+// HOST VARIABLES definitions
+//----------------------------------------------------------------------
+EXEC SQL BEGIN DECLARE SECTION;
+struct {
+	char	 cust[20];
+	char	 prod[20];
+	short    dd;
+	short    mm;
+	short	 yy;
+	char	 state[3];
+	long	 quant;
+}	sale_rec;
+EXEC SQL END DECLARE SECTION;
+EXEC SQL INCLUDE sqlca;
+//----------------------------------------------------------------------
+// CLASS PROTOTYPE declaration
+//----------------------------------------------------------------------
+class Product;
+class DetailInfo;
+//----------------------------------------------------------------------
+// Data Structure definitions(customer)
+//----------------------------------------------------------------------
+class Customer{
+public:
+	char name[20];
+	vector<Product> product;
+
+	Customer(char *c) : name(c){}
+	~Customer(){
+		delete [] name;
+	}
+};
+//----------------------------------------------------------------------
+// Data Structure definitions(product)
+//----------------------------------------------------------------------
+class Product{
+public:
+	char name[20];
+	vector<DetailInfo> detailInfo;
+
+	Product(char *c) : name(c){}
+	~Product(){
+		delete [] name;
+	}
+};
+//----------------------------------------------------------------------
+// Data Structure definitions(product)
+//----------------------------------------------------------------------
+class DetailInfo{
+public:
+	short    dd;
+	short    mm;
+	short	 yy;
+	char	 state[3];
+	long	 quant;
+
+	DetailInfo(const short &d, const short &m, const short &y, char *s, const long &q) : dd(d), mm(m), yy(y), state(s), quant(q){} 
+};
+
+//----------------------------------------------------------------------
+void trieBuild(vector<Customer> &custList){
+//----------------------------------------------------------------------
+	bool in_the_list = false;
+	for(int i=0; i<custList.size(); i++)     //check if current customer is in the list
+		if(strcmp(custList.name, sale_rec.cust)==0)
+			{
+				in_the_list = true;
+				break;
+			}
+	if()
+}
+//----------------------------------------------------------------------
+// Main function
+//----------------------------------------------------------------------
+int main(int argc, char* argv[]){
+	vector<Customer> customerList;
+	//------------------------------------------------------------------
+	// DATABASE CONNECTION
+	//------------------------------------------------------------------
+	EXEC SQL CONNECT TO postgres@localhost:5432 USER postgres IDENTIFIED BY zhy199208;
+   
+    if (sqlca.sqlcode != 0) {	// login error
+   		printf ("Login error!!!\n");
+   		return -1;
+    }
+    EXEC SQL WHENEVER sqlerror sqlprint;
+    //------------------------------------------------------------------
+    // READ RECORDS
+    //------------------------------------------------------------------
+    EXEC SQL DECLARE mycursor CURSOR FOR SELECT * FROM sales;
+    EXEC SQL SET TRANSACTION read only;
+    // Open cursor
+    EXEC SQL OPEN mycursor;
+    // Fetch Data
+    EXEC SQL FETCH FROM mycursor INTO :sale_rec;    //fetch the first row
+    while (sqlca.sqlcode == 0) {
+       trieBuild(customerList);
+       EXEC SQL FETCH FROM mycursor INTO :sale_rec; //fetch the rest rows
+    }
+    // Close cursor
+    EXEC SQL CLOSE mycursor;
+
+    return 0;
+}
