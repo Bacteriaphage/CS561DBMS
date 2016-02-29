@@ -1,0 +1,250 @@
+/*
+ * File - sdap.pgc (Need the .pgc extension!) 
+ *
+ * Desc - This is a simple skeleton program using Embedded SQL to read all
+ *        of the rows from the table "sales" and output to the console.
+ *        Simple but it contains all of the essential features of ESQL 
+ *        discussed in class!
+ *
+ * Steps to run this program : 
+ *  1. In the program (L49), modify [dbname], [username], [password] to
+ *     yours ([dbname] is the same as your [username] by default).
+ *  2. Preprocessor - $ ecpg -I "C:\Program Files\PostgreSQL\9.4\include" sdap.pgc
+ *  3. Compile      - $ gcc -c -I "C:\Program Files\PostgreSQL\9.4\include" sdap.c
+ *  4. Link         - $ gcc -L "C:\Program Files\PostgreSQL\9.4\lib" -lecpg -o sdap sdap.o
+ *  5. Execute      - $ .\sdap
+ */
+
+#include	<stdio.h>
+#include <string.h>
+//----------------------------------------------------------------------
+// HOST VARIABLES definitions
+//----------------------------------------------------------------------
+EXEC SQL BEGIN DECLARE SECTION;
+struct {
+	char	*cust;
+	char	*prod;
+	short    dd;
+	short    mm;
+	short	 yy;
+	char	*state;
+	long	 quant;
+}	sale_rec;
+EXEC SQL END DECLARE SECTION;
+EXEC SQL INCLUDE sqlca;
+//----------------------------------------------------------------------
+// HOST VARIABLES definitions
+//----------------------------------------------------------------------
+struct Data{
+   char    cust[20];
+   char    prod[20];
+   short   dd;
+   short   mm;
+   short   yy;
+   char    state[3];
+   long    quant; 
+};
+//----------------------------------------------------------------------
+// FUNCTION PROTOTYPE declaration
+//----------------------------------------------------------------------
+void	store_record(struct Data *, int); //output records to the console
+void  sort(struct Data *);
+void  output1(struct Data *, int, int);
+void  output2(struct Data *, int, int, int);
+void  query1(struct Data *);
+void  query2(struct Data *);
+//----------------------------------------------------------------------
+int main(int argc, char* argv[])
+//----------------------------------------------------------------------
+{
+   struct Data data[500];
+   int counter=0;
+   //----------------------------------------------------------------------
+   // DATABASE CONNECTION
+   //----------------------------------------------------------------------
+   EXEC SQL CONNECT TO postgres@localhost:5432 USER postgres IDENTIFIED BY zhy199208;
+   
+   if (sqlca.sqlcode != 0) {	// login error
+   	printf ("Login error!!!\n");
+   	return -1;
+   }
+   EXEC SQL WHENEVER sqlerror sqlprint;
+   //----------------------------------------------------------------------
+   // READ RECORDS
+   //----------------------------------------------------------------------
+   EXEC SQL DECLARE mycursor CURSOR FOR SELECT * FROM sales;
+   EXEC SQL SET TRANSACTION read only;
+   // Open cursor
+   EXEC SQL OPEN mycursor;
+   // Fetch Data
+   EXEC SQL FETCH FROM mycursor INTO :sale_rec; //fetch the first row
+   while (sqlca.sqlcode == 0) {
+      store_record(data, counter);
+      EXEC SQL FETCH FROM mycursor INTO :sale_rec; //fetch the rest rows
+      counter++;
+   }
+   // Close cursor
+   EXEC SQL CLOSE mycursor;
+   sort(data);
+   printf(" CUSTOMER  MAX_Q  MAX_PROD  MAX_DATE    ST  MIN_Q  MIN_PROD  MIN_DATE    ST  AVG_Q\n");
+   printf(" ========  =====  ========  ==========  ==  =====  ========  ==========  ==  =====\n");
+   query1(data);
+   printf("\n\n");
+   printf(" CUSTOMER  PRODUCT  NY_MAX  DATE        NJ_MIN  DATE        CT_MIN  DATE      \n");
+   printf(" ========  =======  ======  ==========  ======  ==========  ======  ==========\n");
+   query2(data);
+   return 0;
+}
+
+//----------------------------------------------------------------------
+void	store_record(struct Data *data, int i)
+//----------------------------------------------------------------------
+{
+   strcpy(data[i].cust, sale_rec.cust);
+   strcpy(data[i].prod, sale_rec.prod);
+   strcpy(data[i].state, sale_rec.state);
+   data[i].yy = sale_rec.yy;
+   data[i].dd = sale_rec.dd;
+   data[i].mm = sale_rec.mm;
+   data[i].quant = sale_rec.quant;
+}
+
+//----------------------------------------------------------------------
+void  sort(struct Data *data)
+//----------------------------------------------------------------------
+{
+   int minindex;
+   char tempstr[20];
+   for(int i=0; i<500; i++){
+      minindex = i;
+      for(int j=i+1; j<500; j++){
+         if(strcmp(data[minindex].cust,data[j].cust)>0)
+            minindex = j;
+         else if(strcmp(data[minindex].cust,data[j].cust)==0){
+            if(strcmp(data[minindex].prod,data[j].prod)>0)
+               minindex = j;
+         }
+      }
+      strcpy(tempstr, data[i].cust);
+      strcpy(data[i].cust, data[minindex].cust);
+      strcpy(data[minindex].cust, tempstr);
+      strcpy(tempstr, data[i].prod);
+      strcpy(data[i].prod, data[minindex].prod);
+      strcpy(data[minindex].prod, tempstr);
+   }
+}
+//----------------------------------------------------------------------
+void  output1(struct Data *data, int min, int max)
+//----------------------------------------------------------------------
+{
+      printf(" %-8s ",data[max].cust);   // Customer
+      printf(" %5d ",data[max].quant);  // Quantity
+      printf(" %-8s ",data[max].prod);   // Product
+      printf(" %02d/%02d/%04d ",data[max].mm, data[max].dd, data[max].yy); //date
+      printf(" %-2s ",data[min].state);  // State
+      printf(" %5d ",data[min].quant);  // Quantity
+      printf(" %-8s ",data[min].prod);   // Product
+      printf(" %02d/%02d/%04d ",data[min].mm, data[min].dd, data[min].yy); //date
+      printf(" %-2s ",data[min].state);  // State
+      printf(" %5d \n",(data[min].quant+data[max].quant)/2);  // Average
+
+
+   /*
+   int i=0;
+   for(; i<500; i++)
+   {
+      printf(" %-5s |",data[i].cust);   // Customer
+      printf(" %-7s |",data[i].prod);   // Product
+      printf("  %2d |",data[i].dd);     // Day
+      printf("  %2d |",data[i].mm);     // Month
+      printf(" %4d |",data[i].yy);      // Year
+      printf(" %-5s |",data[i].state);  // State
+      printf(" %5d \n",data[i].quant);  // Quantity
+   }
+   */
+}
+//----------------------------------------------------------------------
+void output2(struct Data *data, int NY, int NJ, int CT){
+//----------------------------------------------------------------------
+   int index;
+   if(NY!=-1){
+      index = NY;
+   }
+   else if(NJ!=-1){
+      index = NJ;
+   }
+   else
+      index = CT;
+   printf(" %-8s ",data[index].cust);   // Customer
+   printf(" %-7s ",data[index].prod);   // Product
+   if(NY!=-1){
+      printf(" %6d ",data[NY].quant);  // Quantity
+      printf(" %02d/%02d/%04d ",data[NY].mm, data[NY].dd, data[NY].yy); //date
+   }
+   else{
+      printf("    N/A ");
+      printf("        N/A ");
+   }
+   if(NJ!=-1){
+      printf(" %6d ",data[NJ].quant);  // Quantity
+      printf(" %02d/%02d/%04d ",data[NJ].mm, data[NJ].dd, data[NJ].yy); //date
+   }
+   else{
+      printf("    N/A ");
+      printf("        N/A ");
+   }
+   if(CT!=-1){
+      printf(" %6d ",data[CT].quant);  // Quantity
+      printf(" %02d/%02d/%04d \n",data[CT].mm, data[CT].dd, data[CT].yy); //date
+   }
+   else{
+      printf("    N/A ");
+      printf("        N/A \n");
+   }
+}
+//----------------------------------------------------------------------
+void query1(struct Data *data){
+//----------------------------------------------------------------------
+   char checkstr[20];
+   strcpy(checkstr, data[0].cust);
+   int minquant=0;
+   int maxquant=0;
+   for(int i=1; i<500; i++){
+      if(strcmp(checkstr, data[i].cust)!=0){
+         output1(data, minquant, maxquant);
+         minquant=maxquant=i;
+         strcpy(checkstr, data[i].cust);
+      }
+      else{
+         if(data[minquant].quant>data[i].quant)
+            minquant=i;
+         if(data[maxquant].quant<data[i].quant)
+            maxquant=i;
+      }
+
+   }
+}
+//----------------------------------------------------------------------
+void query2(struct Data *data){
+//----------------------------------------------------------------------
+   char checkstr[20];
+   strcpy(checkstr, data[0].prod);
+   int NJ=-1;
+   int NY=-1;
+   int CT=-1;
+   for(int i=0; i<500; i++){
+      if(strcmp(checkstr, data[i].prod)!=0){
+         output2(data, NY, NJ, CT);
+         NY=NJ=CT=-1;
+         strcpy(checkstr, data[i].prod);
+      }
+      else{
+         if(strcmp(data[i].state,"NY")==0&&(NY==-1||data[i].quant>data[NY].quant)&&data[i].yy>2000)
+            NY=i;
+         if(strcmp(data[i].state,"NJ")==0&&(NJ==-1||data[i].quant<data[NJ].quant)&&data[i].yy>2000)
+            NJ=i;
+         if(strcmp(data[i].state,"CT")==0&&(CT==-1||data[i].quant<data[CT].quant))
+            CT=i;
+      }
+   }
+}
