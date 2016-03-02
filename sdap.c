@@ -23,21 +23,21 @@
  *  5. Execute      - $ .\sdap
  */
 
-#include	<stdio.h>
+#include <stdio.h>
 #include <string.h>
 //----------------------------------------------------------------------
 // HOST VARIABLES definitions
 //----------------------------------------------------------------------
 /* exec sql begin declare section */
  
-		
-		
-	    
-	    
-		 
-		
-		 
-	
+     
+     
+       
+       
+     
+     
+      
+  
 
 #line 32 "sdap.pgc"
  struct { 
@@ -151,7 +151,7 @@ struct Data{
 //----------------------------------------------------------------------
 // FUNCTION PROTOTYPE declaration
 //----------------------------------------------------------------------
-void	store_record(struct Data *, int); //output records to the console
+void  store_record(struct Data *, int); //output records to the console
 void  sort(struct Data *);
 void  output1(struct Data *, int, int);
 void  output2(struct Data *, int, int, int);
@@ -170,9 +170,9 @@ int main(int argc, char* argv[])
 #line 65 "sdap.pgc"
 
    
-   if (sqlca.sqlcode != 0) {	// login error
-   	printf ("Login error!!!\n");
-   	return -1;
+   if (sqlca.sqlcode != 0) {  // login error
+      printf ("Login error!!!\n");
+      return -1;
    }
    /* exec sql whenever sqlerror  sqlprint ; */
 #line 71 "sdap.pgc"
@@ -260,7 +260,7 @@ if (sqlca.sqlcode < 0) sqlprint();}
 }
 
 //----------------------------------------------------------------------
-void	store_record(struct Data *data, int i)
+void  store_record(struct Data *data, int i)
 //----------------------------------------------------------------------
 {
    strcpy(data[i].cust, sale_rec.cust);
@@ -294,6 +294,23 @@ void  sort(struct Data *data)
       strcpy(tempstr, data[i].prod);
       strcpy(data[i].prod, data[minindex].prod);
       strcpy(data[minindex].prod, tempstr);
+      strcpy(tempstr, data[i].state);
+      strcpy(data[i].state, data[minindex].state);
+      strcpy(data[minindex].state, tempstr);  
+      short tempDate;
+      tempDate = data[i].dd;
+      data[i].dd = data[minindex].dd;
+      data[minindex].dd = tempDate;
+      tempDate = data[i].mm;
+      data[i].mm = data[minindex].mm;
+      data[minindex].mm = tempDate;
+      tempDate = data[i].yy;
+      data[i].yy = data[minindex].yy;
+      data[minindex].yy = tempDate;
+      long tempQuant;
+      tempQuant = data[i].quant;
+      data[i].quant = data[minindex].quant;
+      data[minindex].quant = tempQuant;      
    }
 }
 //----------------------------------------------------------------------
@@ -304,7 +321,7 @@ void  output1(struct Data *data, int min, int max)
       printf(" %5d ",data[max].quant);  // Quantity
       printf(" %-8s ",data[max].prod);   // Product
       printf(" %02d/%02d/%04d ",data[max].mm, data[max].dd, data[max].yy); //date
-      printf(" %-2s ",data[min].state);  // State
+      printf(" %-2s ",data[max].state);  // State
       printf(" %5d ",data[min].quant);  // Quantity
       printf(" %-8s ",data[min].prod);   // Product
       printf(" %02d/%02d/%04d ",data[min].mm, data[min].dd, data[min].yy); //date
@@ -384,8 +401,8 @@ void query1(struct Data *data){
          if(data[maxquant].quant<data[i].quant)
             maxquant=i;
       }
-
    }
+   output1(data, minquant, maxquant);
 }
 //----------------------------------------------------------------------
 void query2(struct Data *data){
