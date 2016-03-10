@@ -26,7 +26,7 @@ struct {
    char  *prod;
    short    dd;
    short    mm;
-   short  yy;
+   short    yy;
    char  *state;
    long   quant;
 }  sale_rec;
@@ -35,30 +35,54 @@ EXEC SQL INCLUDE sqlca;
 //----------------------------------------------------------------------
 // HOST VARIABLES definitions
 //----------------------------------------------------------------------
-struct Data{
+struct Data1{
+   char    cust[20];
+   char    max_prod[20];
+   char    min_prod[20];
+   short   max_dd;
+   short   max_mm;
+   short   max_yy;
+   char    max_state[3];
+   long    max_quant; 
+   short   min_dd;
+   short   min_mm;
+   short   min_yy;
+   char    min_state[3];
+   long    min_quant;
+   long    sum;
+   long    count;
+};
+struct Data2{
    char    cust[20];
    char    prod[20];
-   short   dd;
-   short   mm;
-   short   yy;
-   char    state[3];
-   long    quant; 
+   long    NY_MAX;
+   short   NY_month;
+   short   NY_day;
+   short   NY_year;
+   long    NJ_MIN;
+   short   NJ_month;
+   short   NJ_day;
+   short   NJ_year;
+   long    CT_MIN;
+   short   CT_month;
+   short   CT_day;
+   short   CT_year;
 };
 //----------------------------------------------------------------------
 // FUNCTION PROTOTYPE declaration
 //----------------------------------------------------------------------
-void  store_record(struct Data *, int); //output records to the console
-void  sort(struct Data *);
-void  output1(struct Data *, int, int);
-void  output2(struct Data *, int, int, int);
-void  query1(struct Data *);
-void  query2(struct Data *);
+void  process1(struct Data1 *, int *);
+void  process2(struct Data2 *, int *);
+void  output1(struct Data1 *, int);
+void  output2(struct Data2 *, int);
 //----------------------------------------------------------------------
 int main(int argc, char* argv[])
 //----------------------------------------------------------------------
 {
-   struct Data data[500];
-   int counter=0;
+   struct Data1 data1[500];
+   struct Data2 data2[500];
+   int counter1=0;
+   int counter2=0;
    //----------------------------------------------------------------------
    // DATABASE CONNECTION
    //----------------------------------------------------------------------
@@ -79,189 +103,167 @@ int main(int argc, char* argv[])
    // Fetch Data
    EXEC SQL FETCH FROM mycursor INTO :sale_rec; //fetch the first row
    while (sqlca.sqlcode == 0) {
-      store_record(data, counter);
+      process1(data1, &counter1);
+      process2(data2, &counter2);
       EXEC SQL FETCH FROM mycursor INTO :sale_rec; //fetch the rest rows
-      counter++;
    }
    // Close cursor
    EXEC SQL CLOSE mycursor;
-   sort(data);
    printf(" CUSTOMER  MAX_Q  MAX_PROD  MAX_DATE    ST  MIN_Q  MIN_PROD  MIN_DATE    ST  AVG_Q\n");
    printf(" ========  =====  ========  ==========  ==  =====  ========  ==========  ==  =====\n");
-   query1(data);
+   output1(data1, counter1);
    printf("\n\n");
    printf(" CUSTOMER  PRODUCT  NY_MAX  DATE        NJ_MIN  DATE        CT_MIN  DATE      \n");
    printf(" ========  =======  ======  ==========  ======  ==========  ======  ==========\n");
-   query2(data);
+   output2(data2, counter2);
    return 0;
 }
 
 //----------------------------------------------------------------------
-void  store_record(struct Data *data, int i)
+void output1(struct Data1 *data, int i)
 //----------------------------------------------------------------------
-{
-   strcpy(data[i].cust, sale_rec.cust);
-   strcpy(data[i].prod, sale_rec.prod);
-   strcpy(data[i].state, sale_rec.state);
-   data[i].yy = sale_rec.yy;
-   data[i].dd = sale_rec.dd;
-   data[i].mm = sale_rec.mm;
-   data[i].quant = sale_rec.quant;
-}
-
-//----------------------------------------------------------------------
-void  sort(struct Data *data)
-//----------------------------------------------------------------------
-{
-   int minindex;
-   char tempstr[20];
-   for(int i=0; i<500; i++){
-      minindex = i;
-      for(int j=i+1; j<500; j++){
-         if(strcmp(data[minindex].cust,data[j].cust)>0)
-            minindex = j;
-         else if(strcmp(data[minindex].cust,data[j].cust)==0){
-            if(strcmp(data[minindex].prod,data[j].prod)>0)
-               minindex = j;
-         }
-      }
-      strcpy(tempstr, data[i].cust);
-      strcpy(data[i].cust, data[minindex].cust);
-      strcpy(data[minindex].cust, tempstr);
-      strcpy(tempstr, data[i].prod);
-      strcpy(data[i].prod, data[minindex].prod);
-      strcpy(data[minindex].prod, tempstr);
-      strcpy(tempstr, data[i].state);
-      strcpy(data[i].state, data[minindex].state);
-      strcpy(data[minindex].state, tempstr);  
-      short tempDate;
-      tempDate = data[i].dd;
-      data[i].dd = data[minindex].dd;
-      data[minindex].dd = tempDate;
-      tempDate = data[i].mm;
-      data[i].mm = data[minindex].mm;
-      data[minindex].mm = tempDate;
-      tempDate = data[i].yy;
-      data[i].yy = data[minindex].yy;
-      data[minindex].yy = tempDate;
-      long tempQuant;
-      tempQuant = data[i].quant;
-      data[i].quant = data[minindex].quant;
-      data[minindex].quant = tempQuant;      
+{  
+   for(int j = 0; j < i; j++){
+      printf(" %-8s ",data[j].cust);   // Customer
+      printf(" %5d ",data[j].max_quant);  // Quantity
+      printf(" %-8s ",data[j].max_prod);   // Product
+      printf(" %02d/%02d/%04d ",data[j].max_mm, data[j].max_dd, data[j].max_yy); //date
+      printf(" %-2s ",data[j].max_state);  // State
+      printf(" %5d ",data[j].min_quant);  // Quantity
+      printf(" %-8s ",data[j].min_prod);   // Product
+      printf(" %02d/%02d/%04d ",data[j].min_mm, data[j].min_dd, data[j].min_yy); //date
+      printf(" %-2s ",data[j].min_state);  // State
+      printf(" %5d \n",(data[j].sum/data[j].count));  // Average
    }
 }
 //----------------------------------------------------------------------
-void  output1(struct Data *data, int min, int max)
+void output2(struct Data2 *data, int i){
 //----------------------------------------------------------------------
-{
-      printf(" %-8s ",data[max].cust);   // Customer
-      printf(" %5d ",data[max].quant);  // Quantity
-      printf(" %-8s ",data[max].prod);   // Product
-      printf(" %02d/%02d/%04d ",data[max].mm, data[max].dd, data[max].yy); //date
-      printf(" %-2s ",data[max].state);  // State
-      printf(" %5d ",data[min].quant);  // Quantity
-      printf(" %-8s ",data[min].prod);   // Product
-      printf(" %02d/%02d/%04d ",data[min].mm, data[min].dd, data[min].yy); //date
-      printf(" %-2s ",data[min].state);  // State
-      printf(" %5d \n",(data[min].quant+data[max].quant)/2);  // Average
-
-
-   /*
-   int i=0;
-   for(; i<500; i++)
-   {
-      printf(" %-5s |",data[i].cust);   // Customer
-      printf(" %-7s |",data[i].prod);   // Product
-      printf("  %2d |",data[i].dd);     // Day
-      printf("  %2d |",data[i].mm);     // Month
-      printf(" %4d |",data[i].yy);      // Year
-      printf(" %-5s |",data[i].state);  // State
-      printf(" %5d \n",data[i].quant);  // Quantity
-   }
-   */
-}
-//----------------------------------------------------------------------
-void output2(struct Data *data, int NY, int NJ, int CT){
-//----------------------------------------------------------------------
-   int index;
-   if(NY!=-1){
-      index = NY;
-   }
-   else if(NJ!=-1){
-      index = NJ;
-   }
-   else
-      index = CT;
-   printf(" %-8s ",data[index].cust);   // Customer
-   printf(" %-7s ",data[index].prod);   // Product
-   if(NY!=-1){
-      printf(" %6d ",data[NY].quant);  // Quantity
-      printf(" %02d/%02d/%04d ",data[NY].mm, data[NY].dd, data[NY].yy); //date
-   }
-   else{
-      printf("    N/A ");
-      printf("        N/A ");
-   }
-   if(NJ!=-1){
-      printf(" %6d ",data[NJ].quant);  // Quantity
-      printf(" %02d/%02d/%04d ",data[NJ].mm, data[NJ].dd, data[NJ].yy); //date
-   }
-   else{
-      printf("    N/A ");
-      printf("        N/A ");
-   }
-   if(CT!=-1){
-      printf(" %6d ",data[CT].quant);  // Quantity
-      printf(" %02d/%02d/%04d \n",data[CT].mm, data[CT].dd, data[CT].yy); //date
-   }
-   else{
-      printf("    N/A ");
-      printf("        N/A \n");
-   }
-}
-//----------------------------------------------------------------------
-void query1(struct Data *data){
-//----------------------------------------------------------------------
-   char checkstr[20];
-   strcpy(checkstr, data[0].cust);
-   int minquant=0;
-   int maxquant=0;
-   for(int i=1; i<500; i++){
-      if(strcmp(checkstr, data[i].cust)!=0){
-         output1(data, minquant, maxquant);
-         minquant=maxquant=i;
-         strcpy(checkstr, data[i].cust);
+   for(int j=0; j<i; j++){
+      printf(" %-8s ",data[j].cust);   // Customer
+      printf(" %-7s ",data[j].prod);   // Product
+      if(data[j].NY_MAX!=-1){
+         printf(" %6d ",data[j].NY_MAX);  // Quantity
+         printf(" %02d/%02d/%04d ",data[j].NY_month, data[j].NY_day, data[j].NY_year); //date
       }
       else{
-         if(data[minquant].quant>data[i].quant)
-            minquant=i;
-         if(data[maxquant].quant<data[i].quant)
-            maxquant=i;
+         printf("    N/A ");
+         printf("        N/A ");
       }
-   }
-   output1(data, minquant, maxquant);
-}
-//----------------------------------------------------------------------
-void query2(struct Data *data){
-//----------------------------------------------------------------------
-   char checkstr[20];
-   strcpy(checkstr, data[0].prod);
-   int NJ=-1;
-   int NY=-1;
-   int CT=-1;
-   for(int i=0; i<500; i++){
-      if(strcmp(checkstr, data[i].prod)!=0){
-         output2(data, NY, NJ, CT);
-         NY=NJ=CT=-1;
-         strcpy(checkstr, data[i].prod);
+      if(data[j].NJ_MIN!=-1){
+         printf(" %6d ",data[j].NJ_MIN);  // Quantity
+         printf(" %02d/%02d/%04d ",data[j].NJ_month, data[j].NJ_day, data[j].NJ_year); //date
       }
       else{
-         if(strcmp(data[i].state,"NY")==0&&(NY==-1||data[i].quant>data[NY].quant)&&data[i].yy>2000)
-            NY=i;
-         if(strcmp(data[i].state,"NJ")==0&&(NJ==-1||data[i].quant<data[NJ].quant)&&data[i].yy>2000)
-            NJ=i;
-         if(strcmp(data[i].state,"CT")==0&&(CT==-1||data[i].quant<data[CT].quant))
-            CT=i;
+         printf("    N/A ");
+         printf("        N/A ");
+      }
+      if(data[j].CT_MIN!=-1){
+         printf(" %6d ",data[j].CT_MIN);  // Quantity
+         printf(" %02d/%02d/%04d \n",data[j].CT_month, data[j].CT_day, data[j].CT_year); //date
+      }
+      else{
+         printf("    N/A ");
+         printf("        N/A \n");
+      }
+   }
+}
+//----------------------------------------------------------------------
+void process1(struct Data1 *data, int *i){
+//----------------------------------------------------------------------
+   int j;
+   for(j=0; j<*i; j++)
+      if(strcmp(data[j].cust, sale_rec.cust)==0) break;
+   if(j==*i){                                              //if there is no record of this customer, create a new one
+      strcpy(data[*i].cust, sale_rec.cust);
+      strcpy(data[*i].max_prod, sale_rec.prod);
+      strcpy(data[*i].min_prod, sale_rec.prod);
+      strcpy(data[*i].max_state, sale_rec.state);
+      strcpy(data[*i].min_state, sale_rec.state);
+      data[*i].max_dd=sale_rec.dd;
+      data[*i].max_mm=sale_rec.mm;
+      data[*i].max_yy=sale_rec.yy;
+      data[*i].min_dd=sale_rec.dd;
+      data[*i].min_mm=sale_rec.mm;
+      data[*i].min_yy=sale_rec.yy;
+      data[*i].max_quant=sale_rec.quant;
+      data[*i].min_quant=sale_rec.quant;
+      data[*i].count=1;
+      data[*i].sum=sale_rec.quant;
+      (*i)++;
+   }
+   else{                                                 //updata the recond if new new quant is larger or smaller than old one
+      if(sale_rec.quant>data[j].max_quant){
+         strcpy(data[j].max_prod, sale_rec.prod);
+         strcpy(data[j].max_state, sale_rec.state);
+         data[j].max_dd=sale_rec.dd;
+         data[j].max_mm=sale_rec.mm;
+         data[j].max_yy=sale_rec.yy;
+         data[j].max_quant=sale_rec.quant;
+      }
+      else if(sale_rec.quant<data[j].min_quant){
+         strcpy(data[j].min_prod, sale_rec.prod);
+         strcpy(data[j].min_state, sale_rec.state);
+         data[j].min_dd=sale_rec.dd;
+         data[j].min_mm=sale_rec.mm;
+         data[j].min_yy=sale_rec.yy;
+         data[j].min_quant=sale_rec.quant;
+      }
+      data[j].count++;
+      data[j].sum+=sale_rec.quant;
+   }
+}
+//----------------------------------------------------------------------
+void process2(struct Data2 *data, int *i){
+//----------------------------------------------------------------------
+   int j;
+   for(j=0; j<*i; j++){
+      if(strcmp(data[j].cust, sale_rec.cust)==0 && strcmp(data[j].prod, sale_rec.prod)==0) break;
+   }
+   if(j==*i){
+      strcpy(data[*i].cust, sale_rec.cust);
+      strcpy(data[*i].prod, sale_rec.prod);
+      if(strcmp(sale_rec.state, "NY")==0 && sale_rec.yy > 1999){
+         data[*i].NY_MAX = sale_rec.quant;
+         data[*i].NY_month = sale_rec.mm;
+         data[*i].NY_day = sale_rec.dd;
+         data[*i].NY_year = sale_rec.yy;
+      }
+      else data[*i].NY_MAX=-1;
+      if(strcmp(sale_rec.state, "NJ")==0 && sale_rec.yy > 1999){
+         data[*i].NJ_MIN = sale_rec.quant;
+         data[*i].NJ_month = sale_rec.mm;
+         data[*i].NJ_day = sale_rec.dd;
+         data[*i].NJ_year = sale_rec.yy;
+      }
+      else data[*i].NJ_MIN=-1;
+      if(strcmp(sale_rec.state, "CJ")==0){
+         data[*i].CT_MIN = sale_rec.quant;
+         data[*i].CT_month = sale_rec.mm;
+         data[*i].CT_day = sale_rec.dd;
+         data[*i].CT_year = sale_rec.yy;
+      }
+      else data[*i].CT_MIN=-1;
+      (*i)++;
+   }
+   else{
+      if(strcmp(sale_rec.state, "NY")==0 && sale_rec.yy > 1999 && (sale_rec.quant > data[j].NY_MAX || data[j].NY_MAX == -1)){
+         data[j].NY_MAX = sale_rec.quant;
+         data[j].NY_month = sale_rec.mm;
+         data[j].NY_day = sale_rec.dd;
+         data[j].NY_year = sale_rec.yy;
+      }
+      if(strcmp(sale_rec.state, "NJ")==0 && sale_rec.yy > 1999 && (sale_rec.quant < data[j].NJ_MIN || data[j].NJ_MIN == -1)){
+         data[j].NJ_MIN = sale_rec.quant;
+         data[j].NJ_month = sale_rec.mm;
+         data[j].NJ_day = sale_rec.dd;
+         data[j].NJ_year = sale_rec.yy;
+      }
+      if(strcmp(sale_rec.state, "CT")==0 && (sale_rec.quant < data[j].CT_MIN || data[j].CT_MIN == -1)){
+         data[j].CT_MIN = sale_rec.quant;
+         data[j].CT_month = sale_rec.mm;
+         data[j].CT_day = sale_rec.dd;
+         data[j].CT_year = sale_rec.yy;
       }
    }
 }
