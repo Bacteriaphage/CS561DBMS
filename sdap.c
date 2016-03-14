@@ -15,7 +15,7 @@
  *        discussed in class!
  *
  * Steps to run this program : 
- *  1. In the program (L49), modify [dbname], [username], [password] to
+ *  1. In the program (L93), modify [dbname], [username], [password] to
  *     yours ([dbname] is the same as your [username] by default).
  *  2. Preprocessor - $ ecpg -I "C:\Program Files\PostgreSQL\9.4\include" sdap.pgc
  *  3. Compile      - $ gcc -c -I "C:\Program Files\PostgreSQL\9.4\include" sdap.c
@@ -139,6 +139,8 @@ struct sqlca_t *ECPGget_sqlca(void);
 //----------------------------------------------------------------------
 // HOST VARIABLES definitions
 //----------------------------------------------------------------------
+//query 1 data structure
+//for each customer, store max and min quantity of product along with their date, state and finally calculate average 
 struct Data1{
    char    cust[20];
    char    max_prod[20];
@@ -156,6 +158,8 @@ struct Data1{
    long    sum;
    long    count;
 };
+//query 2 data structure
+//for each combination of customer and product, store max quantity in NY, min quantity in NJ and CT along with their date
 struct Data2{
    char    cust[20];
    char    prod[20];
@@ -191,7 +195,7 @@ int main(int argc, char* argv[])
    // DATABASE CONNECTION
    //----------------------------------------------------------------------
    { ECPGconnect(__LINE__, 0, "postgres@localhost:5432" , "postgres" , "zhy199208" , NULL, 0); }
-#line 89 "sdap.pgc"
+#line 93 "sdap.pgc"
 
    
    if (sqlca.sqlcode != 0) {  // login error
@@ -199,26 +203,26 @@ int main(int argc, char* argv[])
       return -1;
    }
    /* exec sql whenever sqlerror  sqlprint ; */
-#line 95 "sdap.pgc"
+#line 99 "sdap.pgc"
 
    //----------------------------------------------------------------------
    // READ RECORDS
    //----------------------------------------------------------------------
    /* declare mycursor cursor for select * from sales */
-#line 99 "sdap.pgc"
+#line 103 "sdap.pgc"
 
    { ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "set transaction read only", ECPGt_EOIT, ECPGt_EORT);
-#line 100 "sdap.pgc"
+#line 104 "sdap.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 100 "sdap.pgc"
+#line 104 "sdap.pgc"
 
    // Open cursor
    { ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "declare mycursor cursor for select * from sales", ECPGt_EOIT, ECPGt_EORT);
-#line 102 "sdap.pgc"
+#line 106 "sdap.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 102 "sdap.pgc"
+#line 106 "sdap.pgc"
 
    // Fetch Data
    { ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "fetch from mycursor", ECPGt_EOIT, 
@@ -236,10 +240,10 @@ if (sqlca.sqlcode < 0) sqlprint();}
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, 
 	ECPGt_long,&(sale_rec.quant),(long)1,(long)1,sizeof(long), 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);
-#line 104 "sdap.pgc"
+#line 108 "sdap.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 104 "sdap.pgc"
+#line 108 "sdap.pgc"
  //fetch the first row
    while (sqlca.sqlcode == 0) {
       process1(data1, &counter1);
@@ -259,19 +263,20 @@ if (sqlca.sqlcode < 0) sqlprint();}
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, 
 	ECPGt_long,&(sale_rec.quant),(long)1,(long)1,sizeof(long), 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);
-#line 108 "sdap.pgc"
+#line 112 "sdap.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 108 "sdap.pgc"
+#line 112 "sdap.pgc"
  //fetch the rest rows
    }
    // Close cursor
    { ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "close mycursor", ECPGt_EOIT, ECPGt_EORT);
-#line 111 "sdap.pgc"
+#line 115 "sdap.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 111 "sdap.pgc"
+#line 115 "sdap.pgc"
 
+   //query print out
    printf(" CUSTOMER  MAX_Q  MAX_PROD  MAX_DATE    ST  MIN_Q  MIN_PROD  MIN_DATE    ST  AVG_Q\n");
    printf(" ========  =====  ========  ==========  ==  =====  ========  ==========  ==  =====\n");
    output1(data1, counter1);
@@ -381,9 +386,9 @@ void process2(struct Data2 *data, int *i){
 //----------------------------------------------------------------------
    int j;
    for(j=0; j<*i; j++){
-      if(strcmp(data[j].cust, sale_rec.cust)==0 && strcmp(data[j].prod, sale_rec.prod)==0) break;
+      if(strcmp(data[j].cust, sale_rec.cust)==0 && strcmp(data[j].prod, sale_rec.prod)==0) break;    //search current combination in array
    }
-   if(j==*i){
+   if(j==*i){                               //current combination doesn`t exist, create new one and store data in it
       strcpy(data[*i].cust, sale_rec.cust);
       strcpy(data[*i].prod, sale_rec.prod);
       if(strcmp(sale_rec.state, "NY")==0 && sale_rec.yy > 1999){
@@ -400,7 +405,7 @@ void process2(struct Data2 *data, int *i){
          data[*i].NJ_year = sale_rec.yy;
       }
       else data[*i].NJ_MIN=-1;
-      if(strcmp(sale_rec.state, "CJ")==0){
+      if(strcmp(sale_rec.state, "CT")==0){
          data[*i].CT_MIN = sale_rec.quant;
          data[*i].CT_month = sale_rec.mm;
          data[*i].CT_day = sale_rec.dd;
@@ -409,7 +414,7 @@ void process2(struct Data2 *data, int *i){
       else data[*i].CT_MIN=-1;
       (*i)++;
    }
-   else{
+   else{                                    //current combination has been recorded, check whether this com should be updated  
       if(strcmp(sale_rec.state, "NY")==0 && sale_rec.yy > 1999 && (sale_rec.quant > data[j].NY_MAX || data[j].NY_MAX == -1)){
          data[j].NY_MAX = sale_rec.quant;
          data[j].NY_month = sale_rec.mm;
